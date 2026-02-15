@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PvP Arena</title>
+  <style>
+    body {
+      background: #111;
+      color: white;
+      text-align: center;
+      font-family: Arial;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      background: crimson;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: darkred;
+    }
+  </style>
+</head>
+<body>
+
+<h1>⚔️ PvP Arena Online</h1>
+
+<p id="status">Chưa tìm trận</p>
+
+<p id="myHP">HP của bạn: 100</p>
+<p id="enemyHP">HP đối thủ: 100</p>
+
+<button onclick="findMatch()">Tìm trận</button>
+<button onclick="attack()">Attack</button>
+
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+const socket = io("https://power-arena-server.onrender.com/");
+
+let currentRoom = null;
+let myId = null;
+
+socket.on("connect", () => {
+  myId = socket.id;
+});
+
+function findMatch() {
+  socket.emit("findMatch");
+}
+
+socket.on("waiting", () => {
+  document.getElementById("status").innerText = "Đang chờ người chơi...";
+});
+
+socket.on("matchFound", (data) => {
+  currentRoom = data.roomId;
+  document.getElementById("status").innerText = "Đã tìm thấy trận!";
+});
+
+function attack() {
+  if (currentRoom) {
+    socket.emit("attack", { roomId: currentRoom });
+  }
+}
+
+socket.on("updateHP", (room) => {
+
+  if (room.player1.id === myId) {
+    document.getElementById("myHP").innerText = "HP của bạn: " + room.player1.hp;
+    document.getElementById("enemyHP").innerText = "HP đối thủ: " + room.player2.hp;
+  } else {
+    document.getElementById("myHP").innerText = "HP của bạn: " + room.player2.hp;
+    document.getElementById("enemyHP").innerText = "HP đối thủ: " + room.player1.hp;
+  }
+
+});
+
+socket.on("gameOver", (room) => {
+
+  let winner;
+
+  if (room.player1.hp <= 0 && room.player2.hp <= 0) {
+    winner = "Hòa!";
+  } else if (room.player1.id === myId) {
+    winner = room.player1.hp > 0 ? "Bạn thắng!" : "Bạn thua!";
+  } else {
+    winner = room.player2.hp > 0 ? "Bạn thắng!" : "Bạn thua!";
+  }
+
+  document.getElementById("status").innerText = winner;
+});
+</script>
+
+</body>
+</html>
